@@ -206,7 +206,9 @@ module Geocoder
       #
       def fetch_raw_data(query)
         key = cache_key(query)
+        response_encoding = nil
         if cache and body = cache[key]
+          response_encoding = cache["#{key}_encoding"]
           @cache_hit = true
         else
           check_api_key_configuration!(query)
@@ -215,8 +217,6 @@ module Geocoder
           # Ensure the resulting file is encoded to the charset indicated by the response
           # Only run this code for rubies that support the String#force_encoding method
           if response.body.respond_to? :force_encoding
-            response_encoding = nil
-
             if response['content-type'] =~ /charset=(.+);?/
               response_encoding = $1
             end
@@ -229,11 +229,12 @@ module Geocoder
           end
 
           if cache and valid_response?(response)
+            cache["#{key}_encoding"] = response_encoding
             cache[key] = body
           end
           @cache_hit = false
         end
-        body
+        response_encoding ? body.force_encoding(response_encoding) : body
       end
 
       ##
